@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { HistoryItem } from '@/utils/localStorage';
+import { cn } from '@/lib/utils';
 
 interface ResponseAreaProps {
   loading: boolean;
@@ -56,8 +57,14 @@ const ResponseArea: React.FC<ResponseAreaProps> = ({
   return (
     <div className="w-full rounded-2xl glass-card p-4 h-[300px] overflow-y-auto">
       <div className="space-y-6">
-        {conversation.map((item) => (
-          <div key={item.id} className="space-y-3">
+        {conversation.map((item, index) => (
+          <div 
+            key={item.id} 
+            className={cn(
+              "space-y-3",
+              index === conversation.length - 1 && "animate-fade-in"
+            )}
+          >
             <div className="flex gap-3 items-start">
               <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                 <span className="text-xs font-medium">You</span>
@@ -68,7 +75,10 @@ const ResponseArea: React.FC<ResponseAreaProps> = ({
             </div>
             
             {item.response && (
-              <div className="flex gap-3 items-start ml-6">
+              <div className={cn(
+                "flex gap-3 items-start ml-6",
+                index === conversation.length - 1 && "animate-fade-in transition-all"
+              )}>
                 <div className="w-8 h-8 rounded-full assistant-gradient-bg flex items-center justify-center">
                   <span className="text-xs font-medium text-white">AI</span>
                 </div>

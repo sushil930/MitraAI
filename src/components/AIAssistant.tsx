@@ -8,6 +8,7 @@ import ResponseArea from './ResponseArea';
 import FileUpload from './FileUpload';
 import SettingsModal from './SettingsModal';
 import NameModal from './NameModal';
+import AnimatedResponse from './AnimatedResponse';
 
 const AIAssistant: React.FC = () => {
   const [greeting, setGreeting] = useState('');
@@ -18,6 +19,7 @@ const AIAssistant: React.FC = () => {
   const [conversation, setConversation] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [animationState, setAnimationState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   
   // Initialize on first render
   useEffect(() => {
@@ -44,22 +46,36 @@ const AIAssistant: React.FC = () => {
   
   // Handle sending a new message
   const handleSendMessage = async (message: string) => {
+    // Show listening animation briefly to simulate voice input
+    setAnimationState('listening');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     // Add user message to history
     const updatedHistory = addHistoryItem(message);
     setConversation(updatedHistory);
     
-    // Show loading state
+    // Show processing animation
+    setAnimationState('processing');
     setLoading(true);
     
     try {
       // Get simulated response (in a real app, this would be an API call)
       const response = await getSimulatedResponse(message);
       
+      // Show speaking animation
+      setAnimationState('speaking');
+      
       // Update with AI response
       const historyWithResponse = addHistoryItem(message, response);
       setConversation(historyWithResponse);
+      
+      // Reset to idle after a delay
+      setTimeout(() => {
+        setAnimationState('idle');
+      }, 2000);
     } catch (error) {
       console.error('Error getting response:', error);
+      setAnimationState('idle');
     } finally {
       setLoading(false);
     }
@@ -87,6 +103,9 @@ const AIAssistant: React.FC = () => {
           <h2 className="text-3xl font-bold">{greeting}</h2>
           <p className="text-muted-foreground">{description}</p>
         </div>
+        
+        {/* Add animated response section */}
+        <AnimatedResponse state={animationState} />
         
         <ResponseArea 
           loading={loading} 
