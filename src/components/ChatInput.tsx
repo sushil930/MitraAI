@@ -4,6 +4,7 @@ import { Mic, MicOff, Send, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getPlaceholderText } from '@/utils/assistantUtils';
+import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -77,10 +78,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onClick={toggleMic}
           variant="outline"
           size="icon"
-          className={`rounded-full ${isListening ? 'bg-red-500/20' : ''}`}
+          className={cn(
+            "rounded-full transition-all duration-300",
+            isListening ? 'bg-assistant-pink/20 scale-110' : ''
+          )}
           disabled={disabled}
         >
-          {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          {isListening ? (
+            <div className="relative">
+              <MicOff className="h-5 w-5 text-assistant-pink animate-pulse" />
+              <div className="absolute -inset-2 border-2 border-assistant-pink/30 rounded-full animate-ping" />
+            </div>
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
         </Button>
         
         <Button
