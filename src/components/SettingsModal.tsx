@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, GenderFemale, GenderMale, Languages } from 'lucide-react';
+import { User, UserRound, UserSquare, Globe } from 'lucide-react';
 import { getStoredPreferences, updatePreference } from '@/utils/localStorage';
 
 interface SettingsModalProps {
@@ -94,7 +94,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     htmlFor="gender-male"
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
                   >
-                    <GenderMale className="mb-2 h-5 w-5" />
+                    <UserSquare className="mb-2 h-5 w-5" />
                     Male
                   </Label>
                 </div>
@@ -109,7 +109,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     htmlFor="gender-female"
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
                   >
-                    <GenderFemale className="mb-2 h-5 w-5" />
+                    <UserRound className="mb-2 h-5 w-5" />
                     Female
                   </Label>
                 </div>
@@ -120,7 +120,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <TabsContent value="language" className="space-y-4 py-4">
             <div className="space-y-2">
               <Label className="flex items-center">
-                <Languages className="mr-2 h-4 w-4" /> 
+                <Globe className="mr-2 h-4 w-4" /> 
                 Interface Language
               </Label>
               <RadioGroup 
