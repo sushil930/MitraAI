@@ -54,9 +54,6 @@ const AnimatedResponse: React.FC<AnimatedResponseProps> = ({ state }) => {
       </div>
       
       <div className="mt-4 text-center">
-        {state === 'idle' && (
-          <p className="text-muted-foreground">Tap to speak</p>
-        )}
         {state === 'listening' && (
           <p className="text-muted-foreground animate-pulse">Listening...</p>
         )}
