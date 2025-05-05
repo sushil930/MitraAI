@@ -66,47 +66,82 @@ const AIAssistant: React.FC = () => {
   // Handle sending a new message
   const handleSendMessage = async (message: string) => {
     const newItemId = crypto.randomUUID(); 
-    const placeholderHistory = addHistoryItem(message, undefined, newItemId); 
+    // Use the user's message for the placeholder if it's an image search query
+    const placeholderMessage = selectedImageForSearch ? message : message;
+    const placeholderHistory = addHistoryItem(placeholderMessage, undefined, newItemId); 
     setConversation(placeholderHistory);
     setLoading(true);
+    const currentSelectedImage = selectedImageForSearch; 
 
     try {
       const { language, gender } = getStoredPreferences();
-      let response;
+      let responseText: string; // Ensure we always store a string
       
-      // Check if we have a selected image for search
-      if (selectedImageForSearch) {
+      if (currentSelectedImage) {
         // Use image search endpoint
-        response = await apiService.searchImage(
-          message,
-          selectedImageForSearch,
+        const result = await apiService.searchImage(
+          message, 
+          currentSelectedImage,
           language
         );
         
-        // Clear the selected image after search
-        setSelectedImageForSearch(null);
-        // Also remove it from uploaded files
-        setUploadedFiles(prev => prev.filter(file => file !== selectedImageForSearch));
-      } else {
-        // Use regular text search
-        const historyForContext = placeholderHistory.slice(1);
+        if (result && typeof result === 'object' && 'searchUrl' in result) {
+          window.open(result.searchUrl, '_blank');
+          responseText = `Opened Google Images search for '${currentSelectedImage.name}' in a new tab based on your query: "${message}".`;
+        } else {
+          // Handle unexpected response format
+          console.warn('Unexpected response format from searchImage:', result);
+          responseText = 'Received unexpected response format from image search.';
+        }
         
-        // If we have document context, include it in the query
+        setSelectedImageForSearch(null);
+        setUploadedFiles(prev => prev.filter(file => file !== currentSelectedImage));
+
+      } else {
+        // Regular text search
+        const historyForContext = placeholderHistory.slice(1); 
+        
         let enhancedQuery = message;
         if (documentContext) {
-          // Prepend the document context to the query
           enhancedQuery = `Based on the following document:\n\n${documentContext}\n\nQuestion: ${message}`;
         }
         
-        response = await apiService.getResponse(
+        // Call API
+        const apiResult = await apiService.getResponse(
           enhancedQuery, 
           historyForContext,
           language,
           gender.charAt(0).toUpperCase() + gender.slice(1) as 'Neutral' | 'Male' | 'Female'
         );
+
+        // Ensure apiResult is a string
+        if (typeof apiResult === 'string') {
+          responseText = apiResult;
+        } else if (apiResult && typeof apiResult === 'object') {
+          // *** Cast apiResult to any to access potential properties ***
+          const resultObj = apiResult as any; 
+          
+          // Try to extract a string from the object
+          if (resultObj.text && typeof resultObj.text === 'string') {
+            responseText = resultObj.text;
+          } else if (resultObj.response && typeof resultObj.response === 'string') {
+            responseText = resultObj.response;
+          } else {
+            // Last resort: stringify the object
+            try {
+              responseText = JSON.stringify(resultObj);
+            } catch (e) {
+              responseText = "Received a complex response that couldn't be displayed.";
+            }
+          }
+        } else {
+          console.warn('apiService.getResponse returned non-string in handleSendMessage:', apiResult);
+          responseText = "Received unexpected response format."; // Fallback string
+        }
       }
 
-      const finalHistory = updateHistoryItemResponse(newItemId, response); 
+      // Update history with the guaranteed response string
+      const finalHistory = updateHistoryItemResponse(newItemId, responseText); 
       setConversation(finalHistory);
 
     } catch (error) {
@@ -114,6 +149,9 @@ const AIAssistant: React.FC = () => {
       const errorText = error instanceof Error ? error.message : "Sorry, I encountered an error.";
       const errorHistory = updateHistoryItemResponse(newItemId, errorText);
       setConversation(errorHistory);
+      if (currentSelectedImage) {
+          setSelectedImageForSearch(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -124,35 +162,51 @@ const AIAssistant: React.FC = () => {
     const newFiles = Array.from(files);
     setUploadedFiles(prev => [...prev, ...newFiles]);
     
-    // Process each file if needed
     for (const file of newFiles) {
       setLoading(true);
+      let responseText: string | undefined; // Use a clearly typed variable
+      let extractedText: string | null = null;
+      const message = `Analyze this ${file.type.startsWith('image/') ? 'image' : 'document'}: ${file.name}`;
+      const newItemId = crypto.randomUUID(); // Use ID for potential error update
+      const placeholderHistory = addHistoryItem(message, undefined, newItemId);
+      setConversation(placeholderHistory);
+
       try {
-        let response;
-        let extractedText = null;
-        
         if (file.type.startsWith('image/')) {
-          response = await apiService.analyzeImage(file);
+          // Assuming analyzeImage should return a string analysis
+          const analysisResult = await apiService.analyzeImage(file);
+          // Ensure the result is a string
+          if (typeof analysisResult === 'string') {
+            responseText = analysisResult;
+          } else {
+            // Fallback if the backend returned something unexpected
+            console.warn('apiService.analyzeImage did not return a string:', analysisResult);
+            responseText = `Received unexpected analysis format for ${file.name}.`; 
+          }
         } else {
-          // For documents, we now get both extracted text and response
+          // Document handling
           const result = await apiService.analyzeDocument(file);
-          response = result.response || "Document uploaded successfully. You can now ask questions about it.";
-          extractedText = result.extractedText;
+          extractedText = result.extractedText ?? null;
           
-          // If we got extracted text, store it in state
           if (extractedText) {
             setDocumentContext(extractedText);
-            // Add a message to indicate document is ready for questions
-            response = `Document '${file.name}' has been processed. You can now ask questions about its content.`;
+            responseText = `Document '${file.name}' has been processed. You can now ask questions about its content.`;
+          } else {
+            // Use the response field from backend or a default
+            responseText = result.response || `Document '${file.name}' uploaded, but no text could be extracted or no specific response provided.`;
           }
         }
         
-        // Add the file analysis to the conversation
-        const message = `Analyze this ${file.type.startsWith('image/') ? 'image' : 'document'}: ${file.name}`;
-        const updatedHistory = addHistoryItem(message, response);
-        setConversation(updatedHistory);
+        // Update history with the final response string
+        const finalHistory = updateHistoryItemResponse(newItemId, responseText);
+        setConversation(finalHistory);
+
       } catch (error) {
         console.error(`Error processing file ${file.name}:`, error);
+        const errorText = error instanceof Error ? error.message : `Failed to process ${file.name}.`;
+        // Update the placeholder with the error message
+        const errorHistory = updateHistoryItemResponse(newItemId, errorText);
+        setConversation(errorHistory);
       } finally {
         setLoading(false);
       }
@@ -222,16 +276,19 @@ const AIAssistant: React.FC = () => {
       // Call the API service
       const result = await apiService.searchImage(queryForBackend, file, language);
       
-      // Open the returned URL in a new tab
-      if (result.searchUrl) {
+      // Ensure result is properly handled
+      if (result && typeof result === 'object' && 'searchUrl' in result) {
         window.open(result.searchUrl, '_blank');
         // Update history to indicate success
         const successMessage = `Opened Google Images search for '${file.name}' in a new tab.`;
         const finalHistory = updateHistoryItemResponse(newItemId, successMessage);
         setConversation(finalHistory);
       } else {
-        // Handle case where URL is missing (shouldn't happen with apiService check)
-        throw new Error('Search URL was not returned from the backend.');
+        // Handle unexpected response format
+        console.warn('Unexpected response format from searchImage:', result);
+        const errorMessage = 'Received unexpected response format from image search.';
+        const errorHistory = updateHistoryItemResponse(newItemId, errorMessage);
+        setConversation(errorHistory);
       }
 
     } catch (error) {

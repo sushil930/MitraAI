@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, Upload, Trash2, Search } from 'lucide-react'; // Add Search icon
+import { Mic, MicOff, Send, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getPlaceholderText } from '@/utils/assistantUtils';
 import { cn } from '@/lib/utils';
+import { Icon } from '@iconify/react'; // Import the Icon component
 
 // Define the interface for the SpeechRecognition API
 interface CustomSpeechRecognition extends EventTarget {
@@ -205,7 +206,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </Button>
         )}
         
-        {/* Add Image Search button */}
+        {/* Add Image Search button with Iconify icon */}
         {onImageSearch && (
           <Button
             onClick={handleImageSearchClick}
@@ -215,7 +216,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             disabled={disabled}
             title="Search for similar images on the web"
           >
-            <Search className="h-5 w-5" />
+            <Icon icon="tabler:camera-up" className="h-5 w-5" />
           </Button>
         )}
         

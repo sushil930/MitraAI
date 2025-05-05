@@ -26,25 +26,32 @@ const UserMessage = ({ content }: { content: string }) => (
 
 // Static AI avatar (no animation)
 // In AIMessage
-const AIMessage = ({ content }: { content: string }) => (
-  <div className="flex gap-3 items-start ml-6">
-    <motion.div 
-      className="w-10 h-10 rounded-full overflow-hidden" // This makes the container round
-      whileHover={{ scale: 1.1 }}
-      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-    > 
-      <img 
-        src="/assistant.gif" 
-        alt="AI Assistant" 
-        className="w-full h-full object-cover" // This makes the image fill the container
-        style={{ animationPlayState: 'paused' }}
-      />
-    </motion.div>
-    <div className="bg-primary/5 px-4 py-3 rounded-xl rounded-tl-none prose dark:prose-invert max-w-none">
-      <ReactMarkdown>{content}</ReactMarkdown>
+const AIMessage = ({ content }: { content: string }) => {
+  // Ensure content is always a string
+  const safeContent = typeof content === 'string' 
+    ? content 
+    : (content ? JSON.stringify(content) : 'No content available');
+    
+  return (
+    <div className="flex gap-3 items-start ml-6">
+      <motion.div 
+        className="w-10 h-10 rounded-full overflow-hidden"
+        whileHover={{ scale: 1.1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+      > 
+        <img 
+          src="/assistant.gif" 
+          alt="AI Assistant" 
+          className="w-full h-full object-cover"
+          style={{ animationPlayState: 'paused' }}
+        />
+      </motion.div>
+      <div className="bg-primary/5 px-4 py-3 rounded-xl rounded-tl-none prose dark:prose-invert max-w-none">
+        <ReactMarkdown>{safeContent}</ReactMarkdown>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Animated AI avatar for the skeleton/loading state
 // In SkeletonMessage

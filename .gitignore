@@ -283,3 +283,4 @@ cython_debug/
 *.njsproj
 *.sln
 *.sw?
+*.json

@@ -15,3 +15,6 @@ Pillow
 pytesseract
 python-dotenv
 pypdf
+google-cloud-translate
+reportlab
+PyPDF2

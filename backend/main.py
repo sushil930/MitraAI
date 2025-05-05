@@ -1,13 +1,29 @@
 import os
 import requests
 import google.generativeai as genai # Import Gemini library
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify, send_file # Added send_file
 from flask_cors import CORS
-import mimetypes # Import mimetypes
-import urllib.parse # Import urllib.parse
-from pypdf import PdfReader # Import PdfReader from pypdf
-import io # Import io for handling file streams
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
+import google.ai.generativelanguage as glm
+import requests
+import pdfplumber
+from docx import Document
+import fitz # PyMuPDF
+from PIL import Image
+import pytesseract
+import io # Add this import
+from google.cloud import translate_v2 as translate # Add this import
+import urllib.parse # Added for search URL encoding
+import mimetypes # Added for guessing image type
+from PyPDF2 import PdfReader # Corrected import for PdfReader
+
+# --- ReportLab Imports --- 
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
+# --- End ReportLab Imports --- 
 
 # Load environment variables from .env file
 load_dotenv()
@@ -16,17 +32,27 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 if not GEMINI_API_KEY:
     print("Error: GEMINI_API_KEY not found in .env file. AI features will be disabled.")
-    # Handle this case - maybe disable AI features or exit
 else:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
     except Exception as e:
         print(f"Error configuring Gemini API: {e}")
-        GEMINI_API_KEY = None # Disable AI if configuration fails
+        GEMINI_API_KEY = None
+
+# --- Initialize Google Translate Client ---
+# Ensure GOOGLE_APPLICATION_CREDENTIALS environment variable is set
+# pointing to your service account key file.
+translate_client = None
+try:
+    translate_client = translate.Client()
+    print("Google Translate client initialized successfully.")
+except Exception as e:
+    print(f"Error initializing Google Translate client: {e}. Translation endpoint will be disabled.")
+    # You might want to handle this more gracefully depending on your app's needs
 
 app = Flask(__name__)
 
-# Add CORS configuration
+# Add CORS configuration - This should be fine now
 CORS(app, resources={r"/*": {"origins": "http://localhost:8080"}})
 
 # --- Updated /search endpoint with Gemini --- 
@@ -213,6 +239,148 @@ def get_weather():
         print(f"Error parsing conditions data: {e}")
         return jsonify({'error': 'Unexpected response format from AccuWeather Current Conditions API'}), 500
 
+# --- Translation Endpoint (Correct Placement) --- 
+@app.route('/translate', methods=['POST'])
+def handle_translate():
+    if not translate_client:
+        return jsonify({"error": "Translation service not available."}), 503
+        
+    data = request.get_json()
+    if not data or 'text' not in data or 'target_language' not in data:
+        return jsonify({"error": "Missing 'text' or 'target_language' in request"}), 400
+        
+    text_to_translate = data['text']
+    target_language = data['target_language']
+    source_language = data.get('source_language', None)
+    
+    try:
+        result = translate_client.translate(
+            text_to_translate,
+            target_language=target_language,
+            source_language=source_language
+        )
+        
+        translated_text = result['translatedText']
+        detected_source_language = result.get('detectedSourceLanguage', source_language)
+        
+        return jsonify({
+            "translatedText": translated_text,
+            "detectedSourceLanguage": detected_source_language
+        })
+        
+    except Exception as e:
+        print(f"Error during translation: {e}")
+        return jsonify({"error": f"An error occurred during translation: {str(e)}"}), 500
+
 # --- Main execution --- 
+# Initialize Google Translate client (if not already done)
+try:
+    translate_client = translate.Client()
+except Exception as e:
+    print(f"Warning: Could not initialize Google Translate client: {e}")
+    translate_client = None
+
+# --- Add the new endpoint --- 
+@app.route('/images-to-pdf', methods=['POST'])
+def handle_images_to_pdf():
+    if 'images' not in request.files:
+        return jsonify({'error': 'No image files provided'}), 400
+
+    files = request.files.getlist('images')
+
+    if not files:
+        return jsonify({'error': 'No image files provided'}), 400
+
+    if len(files) > 10:
+        return jsonify({'error': 'Maximum 10 images allowed'}), 400
+
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
+    
+    pdf_buffer = io.BytesIO()
+    c = canvas.Canvas(pdf_buffer, pagesize=A4)
+    width, height = A4 # Get A4 dimensions (page size)
+
+    try:
+        for file in files:
+            filename = file.filename.lower() if file.filename else '' # Handle case where filename might be None
+            if '.' not in filename or filename.rsplit('.', 1)[1] not in allowed_extensions:
+                return jsonify({'error': f'Invalid file type: {file.filename}. Allowed types: {allowed_extensions}'}), 400
+
+            try:
+                img_data = file.read()
+                img = Image.open(io.BytesIO(img_data))
+                # Convert image to RGB if it has transparency (like PNG) to avoid potential issues with some PDF viewers
+                if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                    img = img.convert('RGB')
+                    
+                img_width, img_height = img.size
+
+                # Calculate scaling factor to fit image within A4 page, maintaining aspect ratio
+                scale_w = width / img_width
+                scale_h = height / img_height
+                scale = min(scale_w, scale_h) # Use the smaller scale factor
+
+                # Calculate new dimensions based on scale factor
+                new_width = int(img_width * scale)
+                new_height = int(img_height * scale)
+
+                # --- High-Quality Resizing using Pillow --- 
+                if new_width > 0 and new_height > 0:
+                    # Use LANCZOS for best quality resizing
+                    resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    
+                    # Save the resized image to a temporary buffer
+                    resized_img_buffer = io.BytesIO()
+                    # Determine format based on original, default to JPEG for broad compatibility if unknown
+                    original_format = img.format if img.format else 'JPEG'
+                    if original_format.upper() == 'PNG':
+                         resized_img.save(resized_img_buffer, format='PNG')
+                    else:
+                         # Use JPEG with high quality for other formats
+                         resized_img.save(resized_img_buffer, format='JPEG', quality=95) 
+                    resized_img_buffer.seek(0)
+                    
+                    # Center the image on the page
+                    x_offset = (width - new_width) / 2
+                    y_offset = (height - new_height) / 2
+
+                    # Draw the *resized* image data onto the PDF
+                    c.drawImage(ImageReader(resized_img_buffer), x_offset, y_offset, width=new_width, height=new_height, preserveAspectRatio=True)
+                # --- End of Resizing --- 
+                else:
+                    # Handle case of zero dimension if necessary, though unlikely with scaling
+                    print(f"Skipping image {file.filename} due to zero calculated dimension.")
+
+                c.showPage() # Move to the next page
+
+            except Exception as img_proc_error:
+                print(f"Error processing image {file.filename}: {img_proc_error}")
+                # Consider logging the full traceback here for debugging
+                # import traceback
+                # traceback.print_exc()
+                return jsonify({'error': f'Failed to process image: {file.filename}'}), 500
+
+        c.save()
+        pdf_buffer.seek(0)
+        
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name='converted_document.pdf'
+        )
+
+    except Exception as e:
+        print(f"Error creating PDF: {e}")
+        # Consider logging the full traceback here
+        # import traceback
+        # traceback.print_exc()
+        return jsonify({'error': 'Failed to create PDF document'}), 500
+
+# Make sure this is at the very end
 if __name__ == '__main__':
+    # Make sure GOOGLE_APPLICATION_CREDENTIALS is set before running
+    if 'GOOGLE_APPLICATION_CREDENTIALS' not in os.environ:
+        print("\nWarning: GOOGLE_APPLICATION_CREDENTIALS environment variable not set.")
+        print("Translation API calls will likely fail. Please set it to the path of your service account key file.\n")
     app.run(debug=True, port=5000)

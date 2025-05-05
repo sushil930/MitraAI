@@ -55,14 +55,39 @@ export const apiService = {
       });
       
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        // Try to get error message from backend response
+        let errorMsg = `Error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) { /* Ignore if response is not JSON */ }
+        throw new Error(errorMsg);
       }
       
       const data = await response.json();
-      return data.response;
+      // *** Add check here ***
+      if (typeof data.response === 'string') {
+        return data.response;
+      } else {
+        console.warn('API response for /search was not a string:', data.response);
+        // Attempt to stringify if it's an object, otherwise return a default error message
+        if (typeof data.response === 'object' && data.response !== null) {
+          try {
+            return JSON.stringify(data.response);
+          } catch (stringifyError) {
+            return 'Received complex object response from API that could not be displayed.';
+          }
+        } 
+        return 'Received unexpected response format from API.';
+      }
     } catch (error) {
       console.error('Error getting response:', error);
-      throw error;
+      // Ensure the thrown error is always an Error object with a string message
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('An unknown error occurred while fetching the response.');
+      }
     }
   },
   
@@ -168,6 +193,71 @@ export const apiService = {
       return data; // Return the whole object { searchUrl: '...' }
     } catch (error) {
       console.error('Error searching image:', error);
+      throw error;
+    }
+  },
+  
+  // NEW METHOD: Translate text
+  async translateText(text: string, targetLanguage: string, sourceLanguage?: string): Promise<{ translatedText: string, detectedSourceLanguage?: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/translate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          target_language: targetLanguage,
+          source_language: sourceLanguage // Will be undefined if not provided
+        })
+      });
+      
+      if (!response.ok) {
+        let errorMsg = `Error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) { /* Ignore */ }
+        throw new Error(errorMsg);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error translating text:', error);
+      throw error;
+    }
+  },
+  
+  // NEW METHOD: Convert images to PDF
+  async convertImagesToPdf(imageFiles: File[]): Promise<Blob> {
+    try {
+      const formData = new FormData();
+      
+      // Append each image file to the FormData with the same key name 'images'
+      imageFiles.forEach(file => {
+        formData.append('images', file);
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/images-to-pdf`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        // Try to get error message from backend response
+        let errorMsg = `Error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) { /* Ignore if response is not JSON */ }
+        throw new Error(errorMsg);
+      }
+      
+      // Return the response as a blob (PDF file)
+      return await response.blob();
+    } catch (error) {
+      console.error('Error converting images to PDF:', error);
       throw error;
     }
   }

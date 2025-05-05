@@ -1,8 +1,13 @@
 
 import React from 'react';
-import { X, Search } from 'lucide-react'; // Add Search icon
+import { X } from 'lucide-react'; // Keep only the X icon
 import { Button } from '@/components/ui/button';
 import { formatFileSize } from '@/utils/assistantUtils';
+import { Icon } from '@iconify/react'; // Import the Icon component
+
+// Remove the previous imports
+// import { Image } from 'lucide-react';
+// import imageIcon from '/public/image.svg';
 
 interface FileUploadProps {
   files: File[];
@@ -24,7 +29,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       <p className="text-sm text-muted-foreground">
         {selectedImageForSearch ? (
           <span className="flex items-center text-assistant-pink">
-            <Search className="h-3 w-3 mr-1" /> 
+            <Icon icon="tabler:camera-up" className="h-3 w-3 mr-1" />
             Ask a question about the selected image
           </span>
         ) : (
@@ -64,7 +69,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
               </div>
               
-              {/* Add search button for images */}
+              {/* Add search button for images with Iconify icon */}
               {isImage && onSelectImageForSearch && (
                 <Button
                   variant={isSelected ? "default" : "ghost"}
@@ -73,7 +78,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   onClick={() => onSelectImageForSearch(index)}
                   title={isSelected ? "Selected for search" : "Search this image"}
                 >
-                  <Search className="h-3 w-3" />
+                  <Icon icon="tabler:camera-up" className="h-3 w-3" />
                 </Button>
               )}
               
