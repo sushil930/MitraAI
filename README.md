@@ -1,83 +1,212 @@
-# Gentle AI Greet – Project Overview
+# Mitra AI – Your Gentle AI Greet Companion 🤖💬
 
-## Table of Contents
-- [Project Description](#project-description)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Backend (Flask)](#backend-flask)
-- [Frontend (React + Vite)](#frontend-react--vite)
-- [Key Components](#key-components)
-- [Setup & Installation](#setup--installation)
-- [Usage](#usage)
-- [Technologies Used](#technologies-used)
-- [Custom Domain & Deployment](#custom-domain--deployment)
+Mitra AI (formerly *Gentle AI Greet*) is a modern, full-stack AI assistant web application designed to help users chat intelligently, analyze documents and images, translate text, generate PDFs from images, and more — all wrapped in a sleek, intuitive interface.
 
 ---
 
-## Project Description
-Gentle AI Greet is a full-stack AI-powered assistant web application. It enables users to chat with an AI, analyze documents and images, translate text, convert images to PDF, and more. The project is built with a modern React frontend (TypeScript, Vite, Tailwind CSS) and a Python Flask backend leveraging Google Gemini AI, Google Translate, and various document/image processing libraries.
+## 📚 Table of Contents
 
-## Features
-- **Conversational AI Assistant** (Gemini-powered)
-- **Document Analysis** (PDF text extraction)
-- **Image Analysis & Search** (AI-powered keyword extraction, Google Images search)
-- **Image to PDF Conversion** (multi-image upload, high-quality PDF output)
-- **Text Translation** (Google Translate API)
-- **Weather Information** (AccuWeather integration)
-- **Conversation History & Management**
-- **User Preferences** (language, gender, name)
-- **Modern UI/UX** (responsive, accessible, shadcn-ui, Tailwind CSS)
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Frontend (React + Vite)](#frontend-react--vite)
+- [Backend (Flask)](#backend-flask)
+- [Key Components](#key-components)
+- [Setup &amp; Installation](#setup--installation)
+- [Usage](#usage)
+- [Technologies Used](#technologies-used)
+- [Deployment &amp; Custom Domain](#deployment--custom-domain)
+- [Screenshots &amp; Diagrams](#screenshots--diagrams)
+- [License](#license)
 
-## Architecture
-- **Backend:** Python Flask REST API (in `backend/main.py`), with endpoints for AI chat, document/image upload, translation, weather, and PDF generation.
-- **Frontend:** React SPA (in `src/`), with modular components for chat, file upload, modals, and tool integrations.
-- **State Management:** React hooks and localStorage for user preferences and conversation history.
+---
 
-## Backend (Flask)
-- **Main File:** `backend/main.py`
-  - Endpoints:
-    - `/search`: Conversational AI (Gemini)
-    - `/search-image`: AI-powered image keyword extraction & Google Images search
-    - `/upload-doc`: PDF document text extraction
-    - `/images-to-pdf`: Converts up to 10 images to a high-quality PDF (uses Pillow & ReportLab)
-    - `/get-weather`: Fetches weather data from AccuWeather
-    - `/translate`: Text translation via Google Translate
-  - **Technologies:** Flask, flask-cors, google-generativeai, Pillow, ReportLab, PyPDF2, pdfplumber, pytesseract, python-docx, PyMuPDF, dotenv
-  - **Requirements:** See `backend/requirements.txt` for all dependencies
-  - **Environment:** Requires `.env` with API keys (Gemini, AccuWeather, Google Cloud credentials)
+## 🚀 Overview
 
-## Frontend (React + Vite)
-- **Entry Point:** `src/App.tsx` (sets up routing, providers, and main layout)
-- **Key Utilities:**
-  - `src/utils/apiService.ts`: Handles all API calls to the backend (AI, document/image upload, translation, weather, PDF conversion)
-  - `src/utils/assistantUtils.ts`: Provides greeting logic, placeholder text, file size formatting, and assistant name selection
-- **Main Components:**
-  - `AIAssistant.tsx`: Core chat interface, manages conversation, file uploads, and tool modals
-  - `FileUpload.tsx`: Handles file/image uploads and displays previews
-  - `ImageToPdfModal.tsx`: Modal for selecting images and converting them to PDF
-  - Other modals: `NameModal`, `SettingsModal`, `TranslationModal`, `WeatherModel`, `QrScannerModal`
-- **Styling:** Tailwind CSS (`src/App.css` for custom styles)
-- **UI Library:** shadcn-ui
+Mitra AI is crafted for seamless interactions with AI. Built using Python Flask and React + Vite, it utilizes Google Gemini AI for natural language understanding and integrates a suite of tools for image, document, weather, translation, and media handling.
 
-## Key Components
-- **AIAssistant.tsx:** Main chat logic, integrates all tools, manages state, and interacts with backend via `apiService`.
-- **FileUpload.tsx:** Drag-and-drop or select files, preview images, remove files, and trigger image search.
-- **ImageToPdfModal.tsx:** Select up to 10 images, convert to PDF using backend, download result.
-- **apiService.ts:** Centralized API handler for all backend endpoints, with error handling and response validation.
-- **assistantUtils.ts:** Utility functions for greetings, placeholders, file size formatting, and assistant name selection.
+> The name "Mitra" comes from the Sanskrit word for "Friend", symbolizing the assistant's warm and human-like support.
 
-## Setup & Installation
+---
+
+## ✨ Features
+
+- 🤖 **Conversational AI Assistant** (Powered by Google Gemini)
+- 📄 **Document Analysis** (PDF, DOCX extraction)
+- 🖼️ **Image Keyword Extraction & Search** (AI + Google Images)
+- 🖨️ **Image to PDF Conversion** (High-quality output using Pillow & ReportLab)
+- 🌍 **Text Translation** (Google Translate API)
+- 🌤️ **Weather Info** (AccuWeather API)
+- 🕒 **Conversation History Management**
+- 🌐 **Multilingual & Gender Customization**
+- 🎨 **Modern Responsive UI (Tailwind + shadcn-ui)**
+
+---
+
+## 🧠 Architecture
+
+```mermaid
+graph TD
+    A[Frontend - React + Vite] -->|API Calls| B[Backend - Flask REST API]
+    B --> C[Gemini AI - Conversational]
+    B --> D[Google Translate API]
+    B --> E[AccuWeather API]
+    B --> F[PDF/Image/Docx Processors]
+    F --> G[Pillow / ReportLab / PyMuPDF / PyTesseract]
+```
+
+---
+
+## 🎨 Frontend (React + Vite)
+
+- Entry: `src/App.tsx`
+- Modern SPA with modular components
+- Tailwind CSS + shadcn-ui for clean and responsive design
+- Uses `apiService.ts` for all backend interaction
+- Utility-driven: `assistantUtils.ts` for name/gender/greeting logic
+
+### Main Components:
+
+- `AIAssistant.tsx`: Chat interface + tool integrations
+- `FileUpload.tsx`: Drag/drop image & document uploader
+- `ImageToPdfModal.tsx`: Handles image-to-PDF flow
+- `SettingsModal.tsx`, `WeatherModal.tsx`, etc.
+
+---
+
+## 🔧 Backend (Flask)
+
+- Main File: `backend/main.py`
+- Environment: Requires `.env` with:
+  - `GEMINI_API_KEY`
+  - `GOOGLE_TRANSLATE_API_KEY`
+  - `ACCUWEATHER_API_KEY`
+
+### Core Endpoints:
+
+| Endpoint           | Functionality                    |
+| ------------------ | -------------------------------- |
+| `/search`        | AI chat (Gemini integration)     |
+| `/search-image`  | Image keyword AI + Google Search |
+| `/upload-doc`    | PDF/DOCX analysis                |
+| `/images-to-pdf` | Image upload -> High-quality PDF |
+| `/translate`     | Translate user input text        |
+| `/get-weather`   | Weather info via AccuWeather     |
+
+### Libraries:
+
+- `Flask`, `flask-cors`, `PyMuPDF`, `Pillow`, `PyPDF2`, `pytesseract`, `python-docx`
+
+---
+
+## 🧩 Key Components
+
+| Component               | Responsibility                                              |
+| ----------------------- | ----------------------------------------------------------- |
+| `AIAssistant.tsx`     | Main assistant logic, tool integration, state management    |
+| `FileUpload.tsx`      | File handling, drag-and-drop, previews                      |
+| `ImageToPdfModal.tsx` | Select & convert images to PDF                              |
+| `apiService.ts`       | Handles all backend calls with error management             |
+| `assistantUtils.ts`   | Custom greetings, assistant personalization, helper methods |
+
+---
+
+## ⚙️ Setup & Installation
+
 ### Prerequisites
-- Node.js & npm (for frontend)
-- Python 3.8+ (for backend)
-- API keys for Gemini, AccuWeather, and Google Cloud Translate
 
-### Backend Setup
+- **Node.js** & npm (for frontend)
+- **Python 3.8+** (for backend)
+- Create `.env` in `backend/` with required API keys
+
+### 🔁 Backend Setup
+
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate  # On Windows
+source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
-# Set up .env with required API keys
 python main.py
 ```
+
+### 💻 Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🔍 Usage
+
+- Start backend and frontend
+- Open your browser to `http://localhost:5173`
+- Begin chatting with your assistant!
+- Upload images/docs, translate text, generate PDFs
+
+---
+
+## 🛠️ Technologies Used
+
+| Stack Layer         | Tech                                         |
+| ------------------- | -------------------------------------------- |
+| Frontend            | React, TypeScript, Vite, Tailwind, shadcn-ui |
+| Backend             | Python, Flask, flask-cors                    |
+| AI & NLP            | Gemini API (Google Generative AI)            |
+| Image/PDF           | Pillow, ReportLab, PyMuPDF, pytesseract      |
+| Weather & Translate | AccuWeather API, Google Translate            |
+
+---
+
+## ☁️ Deployment & Custom Domain
+
+You can deploy Mitra AI using:
+
+### Frontend:
+
+- Vercel, Netlify, or GitHub Pages
+
+### Backend:
+
+- Render, Railway, or Heroku
+
+> Custom domains can be configured via your chosen hosting platform's dashboard. Ensure API URL paths are correctly set for production.
+
+---
+
+## 🖼️ Screenshots & Diagrams
+
+### Logo
+
+![Mitra AI Logo](./assets/mitra-ai-logo.png)
+
+### Architecture Diagram
+
+![Architecture](./assets/architecture-diagram.png) `<!-- You can generate and upload this -->`
+
+### UI Preview
+
+![Chat Interface](./assets/chat-ui-screenshot.png)
+
+---
+
+## 📄 License
+
+This project is open-source and licensed under the [MIT License](LICENSE).
+
+---
+
+## 🙌 Contribute
+
+Have ideas to improve Mitra AI? PRs and Issues are welcome!
+
+```bash
+# Fork and clone the repo
+# Create a new branch
+# Make your changes
+# Submit a pull request 🚀
+```
+
+> Made with ❤️ by @sushil930 – bringing AI a little closer to home.
