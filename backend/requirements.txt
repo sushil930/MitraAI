@@ -1,0 +1,17 @@
+Flask
+requests
+python-dotenv
+flask-cors # Add this back
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+google-generativeai # Use Google's Generative AI
+googletrans-py # Or another translation library like 'translate'
+pdfplumber
+python-docx
+PyMuPDF
+Pillow
+pytesseract
+python-dotenv
+pypdf

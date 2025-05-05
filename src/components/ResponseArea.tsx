@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { HistoryItem } from '@/utils/localStorage';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ReactMarkdown from 'react-markdown';
+import { motion } from 'framer-motion';
 
 interface ResponseAreaProps {
   loading: boolean;
@@ -10,87 +12,174 @@ interface ResponseAreaProps {
   emptyMessage?: string;
 }
 
+// Extract message bubble components for better code organization
+const UserMessage = ({ content }: { content: string }) => (
+  <div className="flex gap-3 items-start">
+    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+      <span className="text-xs font-medium">You</span>
+    </div>
+    <div className="bg-secondary/30 px-4 py-3 rounded-xl rounded-tl-none">
+      <p>{content}</p>
+    </div>
+  </div>
+);
+
+// Static AI avatar (no animation)
+// In AIMessage
+const AIMessage = ({ content }: { content: string }) => (
+  <div className="flex gap-3 items-start ml-6">
+    <motion.div 
+      className="w-10 h-10 rounded-full overflow-hidden" // This makes the container round
+      whileHover={{ scale: 1.1 }}
+      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+    > 
+      <img 
+        src="/assistant.gif" 
+        alt="AI Assistant" 
+        className="w-full h-full object-cover" // This makes the image fill the container
+        style={{ animationPlayState: 'paused' }}
+      />
+    </motion.div>
+    <div className="bg-primary/5 px-4 py-3 rounded-xl rounded-tl-none prose dark:prose-invert max-w-none">
+      <ReactMarkdown>{content}</ReactMarkdown>
+    </div>
+  </div>
+);
+
+// Animated AI avatar for the skeleton/loading state
+// In SkeletonMessage
+const SkeletonMessage = () => (
+  <div className="flex gap-3 items-start ml-6">
+    <motion.div 
+      className="w-12 h-12 rounded-full overflow-hidden" // Already rounded-full
+      animate={{
+        scale: [1, 1.05, 1],
+        rotate: [0, 5, -5, 0],
+      }}
+      transition={{
+        duration: 2,
+        ease: "easeInOut",
+        times: [0, 0.5, 1],
+        repeat: Infinity,
+      }}
+    > 
+      <img 
+        src="/assistant.gif" 
+        alt="AI Assistant" 
+        className="w-full h-full object-cover" 
+        // No style to pause animation here
+      />
+    </motion.div>
+    <div className="bg-primary/5 px-4 py-3 rounded-xl rounded-tl-none w-full max-w-[80%]">
+      <div className="space-y-2">
+        <motion.div 
+          className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
+        <motion.div 
+          className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+        />
+        <motion.div 
+          className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
+        />
+        <motion.div 
+          className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+        />
+      </div>
+    </div>
+  </div>
+);
+
+// In Empty State
 const ResponseArea: React.FC<ResponseAreaProps> = ({ 
-  loading, 
   conversation, 
   emptyMessage = "Ask me anything to get started!" 
 }) => {
   const responseEndRef = React.useRef<HTMLDivElement>(null);
   
-  // Auto-scroll to the bottom when conversation updates
-  React.useEffect(() => {
-    if (responseEndRef.current) {
-      responseEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [conversation]);
-  
-  // Render loading state
-  if (loading) {
-    return (
-      <div className="w-full rounded-2xl glass-card p-6 h-[300px] overflow-hidden">
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <div className="flex space-x-2 items-center">
-            <div className="w-3 h-3 rounded-full assistant-gradient-bg animate-pulse"></div>
-            <div className="w-3 h-3 rounded-full assistant-gradient-bg animate-pulse delay-150"></div>
-            <div className="w-3 h-3 rounded-full assistant-gradient-bg animate-pulse delay-300"></div>
-            <span className="ml-2">Thinking...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const conversationContent = useMemo(() => {
+    // Ensure conversation is always an array
+    const currentConversation = Array.isArray(conversation) ? conversation : [];
+    
+    return currentConversation.map((item) => (
+      <motion.div 
+        key={item.id} 
+        className="space-y-3"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <UserMessage content={item.query} />
+        
+        {/* Show Skeleton if response is undefined/null, otherwise show AI message */}
+        {item.response === undefined || item.response === null ? (
+           <SkeletonMessage />
+        ) : (
+           <AIMessage content={item.response} />
+        )}
+      </motion.div>
+    ));
+  }, [conversation]); // Dependency is just the conversation array
   
   // Empty state
   if (conversation.length === 0) {
     return (
       <div className="w-full rounded-2xl glass-card p-6 h-[300px] overflow-hidden flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-full assistant-gradient-bg flex items-center justify-center">
-            <span className="text-white text-2xl font-bold">AI</span>
-          </div>
-          <p className="text-muted-foreground">{emptyMessage}</p>
-        </div>
+        <motion.div 
+          className="text-center space-y-4"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, type: "spring" }}
+        >
+          <motion.div 
+            className="mx-auto w-20 h-20 rounded-full overflow-hidden" // Already rounded-full
+            animate={{ 
+              y: [0, -10, 0],
+            }}
+            transition={{ 
+              duration: 3, 
+              repeat: Infinity, 
+              ease: "easeInOut" 
+            }}
+          > 
+            <img 
+              src="/assistant.gif" 
+              alt="AI Assistant" 
+              className="w-full h-full object-cover"
+              style={{ animationPlayState: 'paused' }} /* Pause the GIF animation */
+            />
+          </motion.div>
+          <motion.p 
+            className="text-muted-foreground"
+            animate={{ 
+              opacity: [0.7, 1, 0.7] 
+            }}
+            transition={{ 
+              duration: 3, 
+              repeat: Infinity, 
+              ease: "easeInOut" 
+            }}
+          >
+            {emptyMessage}
+          </motion.p>
+        </motion.div>
       </div>
     );
   }
   
-  // Render conversation
+  // Render conversation with or without loading state
   return (
     <div className="w-full rounded-2xl glass-card p-4 h-[300px]">
       <ScrollArea className="h-full pr-4">
         <div className="space-y-6">
-          {conversation.map((item, index) => (
-            <div 
-              key={item.id} 
-              className={cn(
-                "space-y-3",
-                index === conversation.length - 1 && "animate-fade-in"
-              )}
-            >
-              <div className="flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                  <span className="text-xs font-medium">You</span>
-                </div>
-                <div className="bg-secondary/30 px-4 py-3 rounded-xl rounded-tl-none">
-                  <p>{item.query}</p>
-                </div>
-              </div>
-              
-              {item.response && (
-                <div className={cn(
-                  "flex gap-3 items-start ml-6",
-                  index === conversation.length - 1 && "animate-fade-in transition-all"
-                )}>
-                  <div className="w-8 h-8 rounded-full assistant-gradient-bg flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">AI</span>
-                  </div>
-                  <div className="bg-primary/5 px-4 py-3 rounded-xl rounded-tl-none">
-                    <p>{item.response}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+          {conversationContent}
           <div ref={responseEndRef} />
         </div>
       </ScrollArea>
