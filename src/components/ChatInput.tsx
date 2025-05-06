@@ -250,7 +250,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           disabled={disabled}
           title="Upload files"
         >
-          <Upload className="h-5 w-5" />
+          <Icon icon="mi:document-add" className="h-5 w-5" />
         </Button>
         
         <Button
