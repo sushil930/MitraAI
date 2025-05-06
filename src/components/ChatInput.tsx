@@ -178,6 +178,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  // In the return statement
   return (
     <div className="flex flex-col w-full gap-2">
       <div className="flex items-center gap-2 w-full">
@@ -189,30 +190,33 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={hasSelectedImage ? "Ask a question about the selected image..." : getPlaceholderText()}
             disabled={disabled}
-            className={`glass-input py-6 px-4 pr-10 w-full text-base ${hasSelectedImage ? 'border-assistant-pink' : ''}`}
+            className={`glass-input py-6 px-4 pr-10 w-full text-base ${hasSelectedImage ? 'border-assistant-pink shadow-glow-pink' : ''}`}
           />
         </div>
         
-        {/* Add Clear Chat button */}
+        {/* Buttons with enhanced hover effects */}
         {onClearChat && (
           <Button
             onClick={onClearChat}
             variant="outline"
             size="icon"
-            className="rounded-full"
+            className="rounded-full hover:bg-red-500/10 hover:text-red-500 transition-all duration-300"
             title="Clear chat history"
           >
             <Trash2 className="h-5 w-5" />
           </Button>
         )}
         
-        {/* Add Image Search button with Iconify icon */}
+        {/* Other buttons with similar enhancements */}
+        {/* ... */}
+        
+        {/* Replace the above comments with these buttons: */}
         {onImageSearch && (
           <Button
             onClick={handleImageSearchClick}
             variant="outline"
             size="icon"
-            className="rounded-full"
+            className="rounded-full hover:bg-blue-500/10 hover:text-blue-500 transition-all duration-300"
             disabled={disabled}
             title="Search for similar images on the web"
           >
@@ -246,7 +250,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onClick={handleFileClick}
           variant="outline"
           size="icon"
-          className="rounded-full"
+          className="rounded-full hover:bg-green-500/10 hover:text-green-500 transition-all duration-300"
           disabled={disabled}
           title="Upload files"
         >
@@ -257,7 +261,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onClick={handleSend}
           disabled={!message.trim() || disabled}
           size="icon"
-          className="rounded-full assistant-gradient-bg"
+          className="rounded-full assistant-gradient-bg hover:shadow-lg hover:scale-105 transition-all duration-300"
           title="Send message"
         >
           <Send className="h-5 w-5 text-white" />

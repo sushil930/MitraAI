@@ -58,7 +58,7 @@ const AIMessage = ({ content }: { content: string }) => {
 const SkeletonMessage = () => (
   <div className="flex gap-3 items-start ml-6">
     <motion.div 
-      className="w-12 h-12 rounded-full overflow-hidden" // Already rounded-full
+      className="w-16 h-16 rounded-full overflow-hidden ai-thinking" // Added ai-thinking class
       animate={{
         scale: [1, 1.05, 1],
         rotate: [0, 5, -5, 0],
@@ -74,7 +74,6 @@ const SkeletonMessage = () => (
         src="/assistant.gif" 
         alt="AI Assistant" 
         className="w-full h-full object-cover" 
-        // No style to pause animation here
       />
     </motion.div>
     <div className="bg-primary/5 px-4 py-3 rounded-xl rounded-tl-none w-full max-w-[80%]">
@@ -146,7 +145,7 @@ const ResponseArea: React.FC<ResponseAreaProps> = ({
           transition={{ duration: 0.5, type: "spring" }}
         >
           <motion.div 
-            className="mx-auto w-20 h-20 rounded-full overflow-hidden" // Already rounded-full
+            className="mx-auto w-24 h-24 rounded-full overflow-hidden ai-thinking" // Increased size and added ai-thinking
             animate={{ 
               y: [0, -10, 0],
             }}
@@ -160,11 +159,10 @@ const ResponseArea: React.FC<ResponseAreaProps> = ({
               src="/assistant.gif" 
               alt="AI Assistant" 
               className="w-full h-full object-cover"
-              style={{ animationPlayState: 'paused' }} /* Pause the GIF animation */
             />
           </motion.div>
           <motion.p 
-            className="text-muted-foreground"
+            className="text-muted-foreground text-lg" // Increased text size
             animate={{ 
               opacity: [0.7, 1, 0.7] 
             }}

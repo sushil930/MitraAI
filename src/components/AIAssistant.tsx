@@ -303,10 +303,14 @@ const AIAssistant: React.FC = () => {
   };
   
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-background to-accent/10 transition-colors duration-300">
+    <div className="relative min-h-screen bg-gradient-to-b from-background/80 to-accent/5 transition-colors duration-500">
+      {/* Add animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="floating-circles"></div>
+      </div>
       <div className="wave"></div>
       
-      <div className="container max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <div className="container max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6 relative z-10">
         <Header 
           onOpenSettings={() => setSettingsOpen(true)} 
           onNewConversation={handleNewConversation}
