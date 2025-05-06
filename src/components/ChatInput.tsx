@@ -81,20 +81,30 @@ const ChatInput: React.FC<ChatInputProps> = ({
     recognition.lang = 'en-US'; // Set language
 
     recognition.onresult = (event: Event) => {
-      // Type assertion is still needed here as the base 'Event' doesn't have these properties
-      const speechEvent = event as CustomSpeechRecognitionEvent; 
-      let interimTranscript = '';
+      const speechEvent = event as CustomSpeechRecognitionEvent;
       let finalTranscript = '';
 
-      // Use speechEvent.resultIndex directly
-      for (let i = speechEvent.resultIndex; i < speechEvent.results.length; ++i) { 
+      for (let i = speechEvent.resultIndex; i < speechEvent.results.length; ++i) {
         if (speechEvent.results[i].isFinal) {
           finalTranscript += speechEvent.results[i][0].transcript;
-        } else {
-          interimTranscript += speechEvent.results[i][0].transcript;
         }
       }
-      setMessage(finalTranscript || interimTranscript);
+
+      // If we have a final transcript, send it directly
+      if (finalTranscript.trim()) {
+        onSendMessage(finalTranscript.trim());
+        // Optionally clear the input field visually, though it wasn't being used directly
+        setMessage(''); 
+      } else {
+        // If only interim results, update the input field (optional, could be removed)
+        let interimTranscript = '';
+        for (let i = speechEvent.resultIndex; i < speechEvent.results.length; ++i) {
+           if (!speechEvent.results[i].isFinal) {
+              interimTranscript += speechEvent.results[i][0].transcript;
+           }
+        }
+        setMessage(interimTranscript); // Show interim results in the input
+      }
     };
 
     recognition.onerror = (event: Event) => {
@@ -115,7 +125,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     return () => {
       recognitionRef.current?.stop();
     };
-  }, []);
+  }, [onSendMessage]); // Add onSendMessage to dependency array
 
   const handleSend = () => {
     if (message.trim()) {
