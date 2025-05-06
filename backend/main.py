@@ -18,6 +18,7 @@ from google.cloud import translate_v2 as translate # Add this import
 import urllib.parse # Added for search URL encoding
 import mimetypes # Added for guessing image type
 from PyPDF2 import PdfReader # Corrected import for PdfReader
+import traceback # <--- IMPORT TRACEBACK HERE
 
 # --- ReportLab Imports --- 
 from reportlab.pdfgen import canvas
@@ -95,50 +96,87 @@ def search():
 
 # --- New /search-image endpoint --- 
 @app.route('/search-image', methods=['POST'])
-def search_image():
+def handle_search_image():
+    print("Backend: /search-image endpoint hit") # Log entry
+    # --- ADD CHECK FOR GEMINI API KEY --- 
     if not GEMINI_API_KEY:
-        return jsonify({"error": "AI Service not configured or configuration failed."}), 503
+        print("Backend Error: Gemini API key not configured for /search-image")
+        return jsonify({'error': 'AI Service not configured'}), 503
+        
+    if 'image' not in request.files or 'query' not in request.form:
+        print("Backend Error: Missing 'image' or 'query'") # Log specific error
+        return jsonify({'error': 'Missing image file or query'}), 400
+
+    image_file = request.files['image']
+    query = request.form['query']
+    language = request.form.get('language', 'en') # Default to 'en' if not provided
+
+    print(f"Backend: Received query='{query}', language='{language}', image='{image_file.filename}'") # Log inputs
 
     try:
-        if 'image' not in request.files:
-            return jsonify({"error": "No image file provided"}), 400
-
-        image_file = request.files['image']
-        # Use a more specific prompt for Gemini to get descriptive keywords
-        query = request.form.get('query', 'Generate concise keywords describing the main subject of this image for a web search.') 
-        language = request.form.get('language', 'en')
-
+        # --- 1. Image Processing (Example: Extract keywords with Gemini) ---
+        print("Backend: Processing image with AI...") # Log step
         image_bytes = image_file.read()
-        mime_type = image_file.mimetype
-        if not mime_type:
-             mime_type, _ = mimetypes.guess_type(image_file.filename)
-             if not mime_type:
-                 return jsonify({"error": "Could not determine image type"}), 400
-
-        image_part = {
-            'mime_type': mime_type,
-            'data': image_bytes
-        }
-
-        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # Ask Gemini for descriptive keywords
-        prompt_parts = [image_part, query]
-        response = model.generate_content(prompt_parts)
+        # --- INITIALIZE THE MODEL HERE --- 
+        model = genai.GenerativeModel('gemini-1.5-flash') 
         
-        # Clean up the keywords from the response
-        keywords = response.text.strip().replace('\n', ' ')
+        # Ensure the model is initialized (assuming 'model' is your Gemini model variable)
+        # This check is now less critical as we initialize above, but keep for safety
+        if not model:
+             print("Backend Error: Gemini model could not be initialized") # Updated message
+             return jsonify({'error': 'AI Model not available'}), 503
+
+        # Example Gemini call (adapt to your actual implementation)
+        image_part = {"mime_type": image_file.mimetype, "data": image_bytes}
+        prompt = f"Describe this image briefly for a search query, focusing on the main subject. Query context: {query}"
         
-        # Construct Google Images search URL
-        search_query = urllib.parse.quote_plus(keywords)
-        search_url = f"https://www.google.com/search?tbm=isch&q={search_query}"
+        # Make sure safety settings allow content generation
+        response = model.generate_content([prompt, image_part], stream=False, safety_settings={'HARASSMENT':'block_none', 'HATE_SPEECH':'block_none', 'SEXUAL':'block_none', 'DANGEROUS':'block_none'})
+        
+        # Add robust error checking for the response
+        if not response or not response.candidates:
+             print("Backend Error: No response or candidates from Gemini.")
+             # Check response.prompt_feedback for blocking reasons
+             if response and response.prompt_feedback:
+                 print(f"Backend: Prompt Feedback: {response.prompt_feedback}")
+                 block_reason = getattr(response.prompt_feedback, 'block_reason', None)
+                 if block_reason:
+                     return jsonify({'error': f'Image analysis blocked: {block_reason}'}), 400
+             return jsonify({'error': 'Failed to analyze image with AI'}), 500
 
-        # Return the search URL instead of the raw response text
-        return jsonify({"searchUrl": search_url})
+        # Check if the first candidate has content and parts
+        candidate = response.candidates[0]
+        if not candidate.content or not candidate.content.parts:
+             print("Backend Error: No content parts in Gemini response.")
+             # Check finish_reason
+             finish_reason = getattr(candidate, 'finish_reason', None)
+             if finish_reason and finish_reason != 1: # 1 is typically 'STOP'
+                 print(f"Backend: Generation finished unexpectedly: {finish_reason}")
+                 return jsonify({'error': f'Image analysis failed: {finish_reason}'}), 500
+             return jsonify({'error': 'AI could not generate description from image'}), 500
 
+        extracted_keywords = candidate.content.parts[0].text
+        print(f"Backend: Extracted keywords: {extracted_keywords}") # Log keywords
+
+        # --- 2. Construct Google Images Search URL ---
+        print("Backend: Constructing search URL...") # Log step
+        # Combine original query with extracted keywords for better results
+        search_query = f"{query} {extracted_keywords}" 
+        encoded_query = urllib.parse.quote_plus(search_query)
+        search_url = f"https://www.google.com/search?tbm=isch&q={encoded_query}"
+        print(f"Backend: Generated search URL: {search_url}") # Log URL
+
+        # --- 3. Return the URL ---
+        return jsonify({'searchUrl': search_url})
+
+    except genai.types.BlockedPromptException as bpe:
+         print(f"Backend Error: Prompt blocked during image search - {bpe}")
+         return jsonify({'error': f'Image search blocked by safety filters: {bpe}'}), 400
     except Exception as e:
-        print(f"Error during Gemini API call in /search-image: {e}")
-        return jsonify({"error": f"An error occurred while processing the image: {str(e)}"}), 500
+        print(f"Backend Error: Unexpected error in /search-image: {e}") # Log the exception
+        traceback.print_exc() # Print detailed traceback to backend console
+        return jsonify({'error': 'An unexpected error occurred on the server during image search.'}), 500
 
 # --- New /upload-doc endpoint --- 
 @app.route('/upload-doc', methods=['POST'])

@@ -165,6 +165,7 @@ export const apiService = {
   
   // NEW METHOD: Search through an image with a query
   async searchImage(query: string, imageFile: File, language: 'en' | 'hi' = 'en'): Promise<{ searchUrl: string }> { // Return type changed
+    console.log('Frontend: Calling searchImage API...'); // Add logging
     try {
       const formData = new FormData();
       formData.append('image', imageFile);
@@ -174,26 +175,36 @@ export const apiService = {
       const response = await fetch(`${API_BASE_URL}/search-image`, {
         method: 'POST',
         body: formData
+        // Consider adding a timeout here if requests hang indefinitely
       });
+      
+      console.log('Frontend: Received response status:', response.status); // Add logging
       
       if (!response.ok) {
         // Try to get error message from backend response
         let errorMsg = `Error: ${response.status}`;
         try {
           const errorData = await response.json();
+          console.error('Frontend: Backend error data:', errorData); // Log error details
           errorMsg = errorData.error || errorMsg;
-        } catch (e) { /* Ignore if response is not JSON */ }
+        } catch (e) { 
+          console.error('Frontend: Could not parse error response as JSON.'); // Log parsing error
+          /* Ignore if response is not JSON */ 
+        }
         throw new Error(errorMsg);
       }
       
       const data = await response.json();
-      if (!data.searchUrl) {
-        throw new Error('Backend did not return a search URL.');
+      console.log('Frontend: Received data:', data); // Log success data
+      if (!data.searchUrl || typeof data.searchUrl !== 'string') { // Add type check
+        console.error('Frontend: Invalid searchUrl received:', data.searchUrl); // Log invalid URL
+        throw new Error('Backend did not return a valid search URL.');
       }
       return data; // Return the whole object { searchUrl: '...' }
     } catch (error) {
-      console.error('Error searching image:', error);
-      throw error;
+      console.error('Frontend: Error in searchImage API call:', error); // Log any caught error
+      // Rethrow the error so the calling component knows something went wrong
+      throw error instanceof Error ? error : new Error('An unknown error occurred during image search.');
     }
   },
   
