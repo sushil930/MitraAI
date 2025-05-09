@@ -271,5 +271,49 @@ export const apiService = {
       console.error('Error converting images to PDF:', error);
       throw error;
     }
+  },
+  
+  // NEW METHOD: Process Image (resize, compress, convert)
+  async processImage(
+    imageFile: File,
+    width?: number,
+    height?: number,
+    quality: number = 90,
+    keepAspectRatio: boolean = true,
+    outputFormat: string = 'original'
+  ): Promise<Blob> {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      
+      // Only append parameters that have values
+      if (width) formData.append('width', width.toString());
+      if (height) formData.append('height', height.toString());
+      formData.append('quality', quality.toString());
+      formData.append('keep_aspect_ratio', keepAspectRatio.toString());
+      // Only send output_format if it's not 'original'
+      if (outputFormat && outputFormat !== 'original') formData.append('output_format', outputFormat);
+      
+      const response = await fetch(`${API_BASE_URL}/process-image`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        let errorMsg = `Error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) { /* Ignore if response is not JSON */ }
+        throw new Error(errorMsg);
+      }
+      
+      // The response should be the processed image file as a blob
+      const blob = await response.blob();
+      return blob;
+    } catch (error) {
+      console.error('Error processing image:', error);
+      throw error instanceof Error ? error : new Error('An unknown error occurred during image processing.');
+    }
   }
 };

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, CloudSun, Languages, QrCode } from 'lucide-react';
+import { ArrowLeft, CloudSun, Languages, QrCode, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WeatherModal from '@/components/WeatherModel';
 import TranslationModal from '@/components/TranslationModal';
 import QrScannerModal from '@/components/QrScannerModal';
 import ImageToPdfModal from '@/components/ImageToPdfModal'; // Import the new component
+import ImageProcessingModal from '@/components/ImageProcessingModal'; // Import our new component
 import { Icon } from '@iconify/react';
 
 const Tools: React.FC = () => {
@@ -15,6 +16,7 @@ const Tools: React.FC = () => {
   const [translationModalOpen, setTranslationModalOpen] = useState(false);
   const [qrScannerModalOpen, setQrScannerModalOpen] = useState(false);
   const [imageToPdfModalOpen, setImageToPdfModalOpen] = useState(false); // New state for Image to PDF
+  const [imageProcessingModalOpen, setImageProcessingModalOpen] = useState(false); // New state for Image Processing
 
   const goBack = () => {
     navigate('/');
@@ -45,6 +47,12 @@ const Tools: React.FC = () => {
       title: 'Image to PDF',
       description: 'Convert multiple images into a single PDF document',
       onClick: () => setImageToPdfModalOpen(true)
+    },
+    {
+      icon: <ImageIcon className="h-8 w-8" />, // Using Lucide Image icon
+      title: 'Image Processing',
+      description: 'Resize, compress and convert images easily',
+      onClick: () => setImageProcessingModalOpen(true)
     }
   ];
 
@@ -100,6 +108,9 @@ const Tools: React.FC = () => {
       
       {/* Image to PDF Modal */}
       <ImageToPdfModal open={imageToPdfModalOpen} onClose={() => setImageToPdfModalOpen(false)} />
+      
+      {/* Image Processing Modal */}
+      <ImageProcessingModal open={imageProcessingModalOpen} onClose={() => setImageProcessingModalOpen(false)} />
     </div>
   );
 };

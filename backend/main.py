@@ -415,6 +415,121 @@ def handle_images_to_pdf():
         # traceback.print_exc()
         return jsonify({'error': 'Failed to create PDF document'}), 500
 
+# --- New Image Processing Endpoint ---
+@app.route('/process-image', methods=['POST'])
+def process_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+
+    image_file = request.files['image']
+
+    # Get parameters from form data
+    try:
+        target_width = request.form.get('width', type=int)
+        target_height = request.form.get('height', type=int)
+        quality = request.form.get('quality', default=90, type=int) # Default quality 90
+        # Handle boolean conversion for keep_aspect_ratio
+        keep_aspect_ratio_str = request.form.get('keep_aspect_ratio', 'true').lower()
+        keep_aspect_ratio = keep_aspect_ratio_str == 'true'
+        output_format = request.form.get('output_format', '').upper() # Default to original or JPEG
+    except ValueError:
+        return jsonify({'error': 'Invalid parameter type for width, height, or quality.'}), 400
+
+    allowed_formats = {'JPEG', 'PNG', 'WEBP'} # Add more if needed
+
+    try:
+        img = Image.open(image_file.stream)
+        original_format = img.format if img.format else 'JPEG' # Keep original format or default to JPEG
+
+        if not output_format:
+            output_format = original_format
+        elif output_format not in allowed_formats:
+            return jsonify({'error': f'Unsupported output format: {output_format}. Supported formats: {allowed_formats}'}), 400
+        
+        # Handle RGBA to RGB conversion for JPEG and other formats that don't support alpha
+        if output_format in ['JPEG', 'JPG'] and img.mode in ('RGBA', 'LA', 'P'):
+            # If mode is P (palette) and has transparency, convert to RGBA first
+            if img.mode == 'P' and 'transparency' in img.info:
+                 img = img.convert('RGBA')
+            # Now convert RGBA/LA to RGB
+            if img.mode in ('RGBA', 'LA'):
+                 img = img.convert('RGB')
+
+
+        # --- Resizing ---
+        if target_width or target_height:
+            img_width, img_height = img.size
+            new_width, new_height = img_width, img_height
+
+            if keep_aspect_ratio:
+                if target_width and target_height:
+                    ratio = min(target_width / img_width, target_height / img_height)
+                    new_width = int(img_width * ratio)
+                    new_height = int(img_height * ratio)
+                elif target_width:
+                    new_width = target_width
+                    new_height = int(img_height * (target_width / img_width))
+                elif target_height:
+                    new_height = target_height
+                    new_width = int(img_width * (target_height / img_height))
+            else: # Not keeping aspect ratio
+                if target_width:
+                    new_width = target_width
+                if target_height:
+                    new_height = target_height
+            
+            if new_width > 0 and new_height > 0: # Ensure dimensions are positive
+                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            else:
+                 print(f"Warning: Calculated new dimensions are not positive ({new_width}x{new_height}). Skipping resize.")
+
+
+        # --- Save to buffer ---
+        img_buffer = io.BytesIO()
+        save_params = {}
+        if output_format == 'JPEG':
+            save_params['quality'] = max(1, min(quality, 95)) # Pillow JPEG quality is 1-95
+            save_params['optimize'] = True
+        elif output_format == 'PNG':
+            save_params['optimize'] = True
+            # For PNG, 'quality' is not a direct Pillow save option in the same way as JPEG.
+            # PNG compression is lossless. We can use 'compress_level' (0-9, default 6)
+            # For simplicity, we won't expose compress_level unless requested.
+            # If 'quality' param was intended for PNG, it's a bit of a misnomer.
+            # We could map it to compress_level, e.g. quality < 10 -> compress_level=1, etc.
+            # Or just use default PNG compression. For now, using default.
+            pass
+
+
+        img.save(img_buffer, format=output_format, **save_params)
+        img_buffer.seek(0)
+
+        # Determine mimetype and download name
+        mimetype = f'image/{output_format.lower()}'
+        if output_format == 'JPG': # Common alternative for JPEG
+            mimetype = 'image/jpeg'
+            
+        download_filename = f"processed_image.{output_format.lower()}"
+        if image_file.filename:
+            base, _ = os.path.splitext(image_file.filename)
+            download_filename = f"{base}_processed.{output_format.lower()}"
+
+        return send_file(
+            img_buffer,
+            mimetype=mimetype,
+            as_attachment=True,
+            download_name=download_filename
+        )
+
+    except FileNotFoundError:
+        return jsonify({'error': 'Image file not found after upload (internal error)'}), 500
+    except UnidentifiedImageError: # From Pillow if file is not a valid image
+        return jsonify({'error': 'Cannot identify image file. The file may be corrupt or an unsupported format.'}), 400
+    except Exception as e:
+        print(f"Error processing image: {e}")
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to process image: {str(e)}'}), 500
+
 # Make sure this is at the very end
 if __name__ == '__main__':
     # Make sure GOOGLE_APPLICATION_CREDENTIALS is set before running
