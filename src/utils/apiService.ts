@@ -315,5 +315,56 @@ export const apiService = {
       console.error('Error processing image:', error);
       throw error instanceof Error ? error : new Error('An unknown error occurred during image processing.');
     }
+  },
+  
+  // NEW METHOD: Generate Email
+  async generateEmail(
+    purpose: string,
+    tone: string,
+    recipientType?: string,
+    keyInfo?: string,
+    callToAction?: string,
+    senderName?: string
+  ): Promise<{ subject: string, body: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/generate-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          purpose,
+          tone,
+          recipient_type: recipientType,
+          key_info: keyInfo,
+          call_to_action: callToAction,
+          sender_name: senderName
+        })
+      });
+      
+      if (!response.ok) {
+        let errorMsg = `Error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) { /* Ignore if response is not JSON */ }
+        throw new Error(errorMsg);
+      }
+      
+      const data = await response.json();
+      
+      // Validate the response structure
+      if (!data.subject || !data.body) {
+        throw new Error('Incomplete email content received from server');
+      }
+      
+      return {
+        subject: data.subject,
+        body: data.body
+      };
+    } catch (error) {
+      console.error('Error generating email:', error);
+      throw error instanceof Error ? error : new Error('An unknown error occurred during email generation.');
+    }
   }
 };

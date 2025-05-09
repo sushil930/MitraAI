@@ -19,6 +19,7 @@ import urllib.parse # Added for search URL encoding
 import mimetypes # Added for guessing image type
 from PyPDF2 import PdfReader # Corrected import for PdfReader
 import traceback # <--- IMPORT TRACEBACK HERE
+import json # Added for JSON handling
 
 # --- ReportLab Imports --- 
 from reportlab.pdfgen import canvas
@@ -529,6 +530,100 @@ def process_image():
         print(f"Error processing image: {e}")
         traceback.print_exc()
         return jsonify({'error': f'Failed to process image: {str(e)}'}), 500
+
+# --- New AI Email Generator Endpoint ---
+@app.route('/generate-email', methods=['POST'])
+def generate_email():
+    if not GEMINI_API_KEY:
+        return jsonify({"error": "AI Service not configured."}), 503
+
+    try:
+        data = request.json
+        purpose = data.get('purpose')
+        tone = data.get('tone')
+        recipient_type = data.get('recipient_type', '') # Optional
+        key_info = data.get('key_info', '') # Optional
+        call_to_action = data.get('call_to_action', '') # Optional
+        sender_name = data.get('sender_name', '') # Optional
+
+        if not purpose or not tone:
+            return jsonify({"error": "'purpose' and 'tone' are required fields."}), 400
+
+        # Define available tones to validate against and use in prompt
+        available_tones = ['Formal', 'Informal', 'Persuasive', 'Appreciative', 'Apologetic', 'Inquiring', 'Friendly', 'Assertive']
+        if tone not in available_tones:
+            return jsonify({"error": f"Invalid tone. Available tones are: {', '.join(available_tones)}"}), 400
+
+        model = genai.GenerativeModel(
+            'gemini-1.5-flash',
+            generation_config=genai.types.GenerationConfig(
+                response_mime_type="application/json"
+            )
+        )
+
+        prompt_parts = [
+            "You are an expert email writing assistant.",
+            "Your task is to generate a professional and effective email based on the user's requirements.",
+            "Please generate a subject line and an email body.",
+            "The email should be written in a " + tone + " tone.",
+            "The main purpose of the email is: " + purpose + "."
+        ]
+
+        if recipient_type:
+            prompt_parts.append(f"The email is intended for a {recipient_type}.")
+        if key_info:
+            prompt_parts.append(f"Ensure the following key information is included: {key_info}.")
+        if call_to_action:
+            prompt_parts.append(f"The desired call to action for the recipient is: {call_to_action}.")
+        if sender_name:
+            prompt_parts.append(f"The email should be signed off as from {sender_name} if a closing is generated.")
+        else:
+            prompt_parts.append("If a closing is generated, use a generic placeholder like '[Your Name]' for the sender.")
+
+        prompt_parts.extend([
+            "Output the result as a JSON object with two keys: 'subject' and 'body'.",
+            "Example JSON output: {\"subject\": \"Generated Subject\", \"body\": \"Dear recipient,\\n\\nEmail content here.\\n\\nRegards,\\nSender\"}"
+        ])
+        
+        prompt = "\n".join(prompt_parts)
+
+        # print(f"DEBUG: Gemini Prompt for email generation:\n{prompt}") # For debugging
+
+        response = model.generate_content(prompt)
+        
+        # print(f"DEBUG: Gemini Response text:\n{response.text}") # For debugging
+
+        # Assuming Gemini returns a valid JSON string as response.text due to response_mime_type config
+        # No need to manually parse if the API handles it directly into response.parts[0].json
+        # However, the SDK structure might still put the JSON string into response.text initially.
+        # Let's be safe and parse if it's a string.
+        if response.text:
+            try:
+                email_content = json.loads(response.text)
+                if not isinstance(email_content, dict) or 'subject' not in email_content or 'body' not in email_content:
+                    raise ValueError("JSON output from AI is not in the expected format (missing subject or body).")
+                return jsonify(email_content)
+            except json.JSONDecodeError as json_err:
+                print(f"Error decoding JSON from Gemini: {json_err}")
+                print(f"Raw response from Gemini: {response.text}")
+                return jsonify({"error": "Failed to parse AI response as JSON. The AI may not have returned the expected structure."}), 500
+            except ValueError as val_err:
+                print(f"Validation Error: {val_err}")
+                print(f"Raw response from Gemini: {response.text}")
+                return jsonify({"error": str(val_err)}), 500
+        else:
+            # Check prompt feedback for blocking reasons if response is empty
+            if response.prompt_feedback:
+                 print(f"Backend: Prompt Feedback: {response.prompt_feedback}")
+                 block_reason = getattr(response.prompt_feedback, 'block_reason', None)
+                 if block_reason:
+                     return jsonify({'error': f'Email generation blocked by content filters: {block_reason}'}), 400
+            return jsonify({"error": "AI service returned an empty response."}), 500
+
+    except Exception as e:
+        print(f"Error during email generation: {e}")
+        traceback.print_exc()
+        return jsonify({"error": f"An unexpected error occurred on the server during email generation: {str(e)}"}), 500
 
 # Make sure this is at the very end
 if __name__ == '__main__':

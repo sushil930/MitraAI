@@ -35,6 +35,8 @@ Mitra AI is crafted for seamless interactions with AI. Built using Python Flask 
 - 📄 **Document Analysis** (PDF, DOCX extraction)
 - 🖼️ **Image Keyword Extraction & Search** (AI + Google Images)
 - 🖨️ **Image to PDF Conversion** (High-quality output using Pillow & ReportLab)
+- 🔧 **Image Processing Tool** (Resize, compress, and convert images)
+- 📧 **AI Email Generator** (Create professional emails with custom tone)
 - 🌍 **Text Translation** (Google Translate API)
 - 🌤️ **Weather Info** (AccuWeather API)
 - 🕒 **Conversation History Management**
@@ -53,6 +55,7 @@ graph TD
     B --> E[AccuWeather API]
     B --> F[PDF/Image/Docx Processors]
     F --> G[Pillow / ReportLab / PyMuPDF / PyTesseract]
+    B --> H[Email Generation]
 ```
 
 ---
@@ -70,6 +73,8 @@ graph TD
 - `AIAssistant.tsx`: Chat interface + tool integrations
 - `FileUpload.tsx`: Drag/drop image & document uploader
 - `ImageToPdfModal.tsx`: Handles image-to-PDF flow
+- `ImageProcessingModal.tsx`: Image resizing and conversion
+- `EmailGeneratorModal.tsx`: AI-powered email creation
 - `SettingsModal.tsx`, `WeatherModal.tsx`, etc.
 
 ---
@@ -90,6 +95,8 @@ graph TD
 | `/search-image`  | Image keyword AI + Google Search |
 | `/upload-doc`    | PDF/DOCX analysis                |
 | `/images-to-pdf` | Image upload -> High-quality PDF |
+| `/process-image` | Resize, compress, format images  |
+| `/generate-email`| AI email generation with tones   |
 | `/translate`     | Translate user input text        |
 | `/get-weather`   | Weather info via AccuWeather     |
 
@@ -101,13 +108,15 @@ graph TD
 
 ## 🧩 Key Components
 
-| Component               | Responsibility                                              |
+| Component                | Responsibility                                              |
 | ----------------------- | ----------------------------------------------------------- |
-| `AIAssistant.tsx`     | Main assistant logic, tool integration, state management    |
-| `FileUpload.tsx`      | File handling, drag-and-drop, previews                      |
-| `ImageToPdfModal.tsx` | Select & convert images to PDF                              |
-| `apiService.ts`       | Handles all backend calls with error management             |
-| `assistantUtils.ts`   | Custom greetings, assistant personalization, helper methods |
+| `AIAssistant.tsx`      | Main assistant logic, tool integration, state management    |
+| `FileUpload.tsx`       | File handling, drag-and-drop, previews                      |
+| `ImageToPdfModal.tsx`  | Select & convert images to PDF                              |
+| `ImageProcessingModal.tsx` | Image resizing, compression and format conversion        |
+| `EmailGeneratorModal.tsx` | Generate professional emails with customizable tone       |
+| `apiService.ts`        | Handles all backend calls with error management             |
+| `assistantUtils.ts`    | Custom greetings, assistant personalization, helper methods |
 
 ---
 
@@ -144,7 +153,10 @@ npm run dev
 - Start backend and frontend
 - Open your browser to `http://localhost:5173`
 - Begin chatting with your assistant!
-- Upload images/docs, translate text, generate PDFs
+- Access tools from the Tools page:
+  - Upload images/docs, translate text, generate PDFs
+  - Process images (resize, compress, convert formats)
+  - Generate professional emails with AI assistance
 
 ---
 
